@@ -1,5 +1,8 @@
 .git
 .env
+.env.*
+!.env.example
 config.php
+vendor/
 *.log
 .DS_Store
