@@ -30,8 +30,8 @@ $appName = 'Zedex Music Studio';
       <a class="brand" href="index.php"><span class="brand-mark">Z</span><span>ZEDEX<span class="brand-sub">MUSIC STUDIO</span></span></a>
       <div class="nav-label">WORKSPACE</div>
       <a class="nav-item active" href="index.php"><span>▦</span> Overview</a>
-      <a class="nav-item" href="#releases"><span>♫</span> My releases</a>
-      <a class="nav-item" href="#distribution"><span>◈</span> Distribution</a>
+      <a class="nav-item" href="releases.php"><span>♫</span> My releases</a>
+      <a class="nav-item" href="distribution.php"><span>◈</span> Distribution</a>
       <div class="sidebar-bottom"><span class="status-dot"></span> Secure admin session</div>
     </aside>
     <main class="main">
@@ -43,7 +43,7 @@ $appName = 'Zedex Music Studio';
       <section class="welcome">
         <div><div class="eyebrow">WELCOME TO YOUR STUDIO</div><h2>Make your next release<br><span>count.</span></h2>
           <p>Keep your songs, artwork, release details and distribution progress organised in one place.</p>
-          <a class="primary-button" href="#releases">Explore your workspace <span>↗</span></a>
+          <a class="primary-button" href="releases.php">Manage your releases <span>↗</span></a>
         </div>
         <div class="hero-art" aria-hidden="true"><div class="disc"><div class="disc-center">Z</div></div><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div></div>
       </section>
@@ -60,14 +60,14 @@ $appName = 'Zedex Music Studio';
               <div class="release-row"><div><strong><?= h($release['title']) ?></strong><small><?= h($release['artist_name']) ?></small></div><span class="pill"><?= h(ucfirst($release['status'])) ?></span></div>
             <?php endforeach; ?></div>
           <?php else: ?>
-            <div class="empty-state"><div class="empty-icon">♫</div><h4>Your music space is ready</h4><p>Your release catalogue is empty. Song management is the next build stage.</p></div>
+            <div class="empty-state"><div class="empty-icon">♫</div><h4>Your music space is ready</h4><p>Your release catalogue is empty. Add your first release to get started.</p><a class="primary-button" href="releases.php">Add your first release →</a></div>
           <?php endif; ?>
         </article>
         <article class="panel" id="distribution">
           <div class="eyebrow">DISTRIBUTION</div><h3>Release everywhere</h3>
           <p class="panel-copy">Prepare your release information here, then use an authorised music distributor to deliver tracks to supported platforms.</p>
           <div class="platform-list"><span>Instagram Music</span><span>Spotify</span><span>Apple Music</span><span>YouTube Music</span></div>
-          <div class="notice">Zedex Music Studio organises your releases. It does not itself deliver music to streaming platforms.</div>
+          <div class="notice">Zedex Music Studio organises your releases. It does not itself deliver music to streaming platforms.</div><a class="secondary-button" href="distribution.php">Open distribution tracker →</a>
         </article>
       </section>
       <footer>ZEDEX MUSIC STUDIO <span>PERSONAL MUSIC WORKSPACE</span></footer>
