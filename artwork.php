@@ -11,8 +11,7 @@ $stmt = $pdo->prepare('SELECT mime_type,image_data FROM release_artwork WHERE re
 $stmt->execute(['id'=>$id]);
 $image = $stmt->fetch();
 if (!$image || !in_array($image['mime_type'], ['image/jpeg','image/png','image/webp'], true)) { http_response_code(404); exit; }
-$data = $image['image_data'];
-if (is_resource($data)) $data = stream_get_contents($data);
+$data = base64_decode((string)$image['image_data'], true);
 if (!is_string($data) || $data === '') { http_response_code(404); exit; }
 header('Content-Type: ' . $image['mime_type']);
 header('Content-Length: ' . strlen($data));
