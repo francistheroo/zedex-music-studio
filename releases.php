@@ -71,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $imageStmt = $pdo->prepare('INSERT INTO release_artwork (release_id,mime_type,image_data,updated_at) VALUES (:id,:mime,:data,NOW()) ON CONFLICT (release_id) DO UPDATE SET mime_type=EXCLUDED.mime_type,image_data=EXCLUDED.image_data,updated_at=NOW()');
                 $imageStmt->bindValue(':id', $releaseId, PDO::PARAM_INT);
                 $imageStmt->bindValue(':mime', $newArtwork['mime'], PDO::PARAM_STR);
-                $imageStmt->bindValue(':data', $newArtwork['data'], PDO::PARAM_LOB);
+                $imageStmt->bindValue(':data', base64_encode($newArtwork['data']), PDO::PARAM_STR);
                 $imageStmt->execute();
             }
             redirect_to('releases.php?saved=1');
