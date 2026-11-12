@@ -3,7 +3,10 @@
 A personal music-release workspace built with PHP 8.3, Apache and Neon PostgreSQL.
 
 ## Current stage
-- Responsive dark dashboard
+- Responsive dark dashboard with working Overview, My Releases and Distribution navigation
+- Release manager with add, edit and delete actions, release dates, status and notes
+- JPG, PNG and WEBP cover-art upload (up to 5 MB), stored in Neon PostgreSQL
+- Distribution guide with official distributor links, target-platform selection and per-release submission tracking
 - Neon PostgreSQL connection through PHP PDO_PGSQL
 - Admin sign-in with password hashing, CSRF protection, secure session cookies and login throttling
 - PostgreSQL schema for admins, login attempts and music releases
@@ -45,7 +48,8 @@ Open the Neon SQL Editor for the selected project and run the complete contents 
 This creates:
 - `admins` — the private admin account
 - `login_attempts` — temporary login throttling
-- `releases` — music release metadata
+- `releases` — music release metadata and distribution tracking
+- `release_artwork` — cover artwork stored persistently in Neon PostgreSQL
 
 ## 3. Configure the PHP app
 
@@ -75,7 +79,7 @@ Run:
 php scripts/check_database.php
 ```
 
-A successful check reports the Neon database, connected user, PostgreSQL version and confirms all three expected tables exist.
+A successful check reports the Neon database, connected user, PostgreSQL version and confirms the application tables exist.
 
 Check PHP syntax before deployment:
 
