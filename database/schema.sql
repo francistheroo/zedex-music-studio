@@ -33,3 +33,17 @@ CREATE TABLE IF NOT EXISTS releases (
 
 CREATE INDEX IF NOT EXISTS releases_release_date_idx ON releases (release_date);
 CREATE INDEX IF NOT EXISTS releases_status_idx ON releases (status);
+
+-- Release distribution tracking.
+ALTER TABLE releases ADD COLUMN IF NOT EXISTS distributor_name VARCHAR(200) NULL;
+ALTER TABLE releases ADD COLUMN IF NOT EXISTS distributor_url TEXT NULL;
+ALTER TABLE releases ADD COLUMN IF NOT EXISTS submitted_at DATE NULL;
+ALTER TABLE releases ADD COLUMN IF NOT EXISTS platforms TEXT NULL;
+
+-- Cover images are stored in Neon PostgreSQL, not on Render's temporary filesystem.
+CREATE TABLE IF NOT EXISTS release_artwork (
+    release_id BIGINT PRIMARY KEY REFERENCES releases(id) ON DELETE CASCADE,
+    mime_type VARCHAR(40) NOT NULL,
+    image_data TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
