@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/load_env.php';
+
 /**
  * Read Neon credentials from the hosting environment. Never commit credentials.
  * Set DATABASE_URL to the Neon connection string (prefer the pooled connection).
@@ -20,7 +22,7 @@ function database_connection(): PDO
         }
         $host = $parts['host'];
         $port = (int)($parts['port'] ?? 5432);
-        $dbname = ltrim($parts['path'], '/');
+        $dbname = rawurldecode(ltrim($parts['path'], '/'));
         $user = rawurldecode((string)($parts['user'] ?? ''));
         $password = rawurldecode((string)($parts['pass'] ?? ''));
     } else {
@@ -35,7 +37,6 @@ function database_connection(): PDO
         throw new RuntimeException('Database is not configured. Add your Neon DATABASE_URL in the hosting environment.');
     }
 
-    // Neon requires TLS. Do not allow an unencrypted production connection.
     $dsn = sprintf('pgsql:host=%s;port=%d;dbname=%s;sslmode=require', $host, $port, $dbname);
     $pdo = new PDO($dsn, $user, $password, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
