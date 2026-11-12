@@ -24,7 +24,7 @@ function ensure_release_schema(PDO $pdo): void
     $pdo->exec("CREATE TABLE IF NOT EXISTS release_artwork (
         release_id BIGINT PRIMARY KEY REFERENCES releases(id) ON DELETE CASCADE,
         mime_type VARCHAR(40) NOT NULL,
-        image_data BYTEA NOT NULL,
+        image_data TEXT NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )");
 }
