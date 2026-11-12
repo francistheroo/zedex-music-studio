@@ -1,16 +1,6 @@
 Options -Indexes
-<FilesMatch "^(\.env|\.htaccess)$">
+RewriteEngine On
+RewriteRule ^(config|database|includes|scripts)(/|$) - [F,L]
+<FilesMatch "^(\.env|\.env\.local|\.htaccess)$">
     Require all denied
 </FilesMatch>
-<Directory "config">
-    Require all denied
-</Directory>
-<Directory "database">
-    Require all denied
-</Directory>
-<Directory "includes">
-    Require all denied
-</Directory>
-<Directory "scripts">
-    Require all denied
-</Directory>
