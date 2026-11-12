@@ -1,9 +1,17 @@
 FROM php:8.3-apache
-RUN docker-php-ext-install pdo pdo_pgsql \
-    && a2enmod rewrite headers
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libpq-dev \
+    && docker-php-ext-install pdo pdo_pgsql \
+    && a2enmod rewrite headers \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /var/www/html
+
 COPY . /var/www/html/
-RUN chown -R www-data:www-data /var/www/html \
-    && printf '\n<Directory /var/www/html>\n    AllowOverride All\n    Require all granted\n</Directory>\n' >> /etc/apache2/apache2.conf
+
+RUN chown -R www-data:www-data /var/www/html
+
 EXPOSE 80
+
 CMD ["apache2-foreground"]
