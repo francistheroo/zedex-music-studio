@@ -28,11 +28,19 @@ function require_admin(): array
     return $admin;
 }
 
+function login_hash_secret(): string
+{
+    $secret = getenv('APP_KEY') ?: (getenv('DATABASE_URL') ?: '');
+    if ($secret === '') {
+        throw new RuntimeException('Set APP_KEY in the hosting environment.');
+    }
+    return $secret;
+}
+
 function login_is_throttled(string $email): bool
 {
     $ip = (string)($_SERVER['REMOTE_ADDR'] ?? 'unknown');
-    $secret = getenv('APP_KEY') ?: 'zedex-login-throttle-change-this-key';
-    $ipHash = hash_hmac('sha256', $ip, $secret);
+    $ipHash = hash_hmac('sha256', $ip, login_hash_secret());
     $stmt = database_connection()->prepare(
         'SELECT locked_until FROM login_attempts WHERE email = :email AND ip_hash = :ip_hash'
     );
@@ -44,8 +52,7 @@ function login_is_throttled(string $email): bool
 function record_failed_login(string $email): void
 {
     $ip = (string)($_SERVER['REMOTE_ADDR'] ?? 'unknown');
-    $secret = getenv('APP_KEY') ?: 'zedex-login-throttle-change-this-key';
-    $ipHash = hash_hmac('sha256', $ip, $secret);
+    $ipHash = hash_hmac('sha256', $ip, login_hash_secret());
     $pdo = database_connection();
     $stmt = $pdo->prepare(
         "INSERT INTO login_attempts (email, ip_hash, attempts, window_started, locked_until)
@@ -66,7 +73,6 @@ function record_failed_login(string $email): void
 function clear_failed_logins(string $email): void
 {
     $ip = (string)($_SERVER['REMOTE_ADDR'] ?? 'unknown');
-    $secret = getenv('APP_KEY') ?: 'zedex-login-throttle-change-this-key';
     $stmt = database_connection()->prepare('DELETE FROM login_attempts WHERE email = :email AND ip_hash = :ip_hash');
-    $stmt->execute(['email' => $email, 'ip_hash' => hash_hmac('sha256', $ip, $secret)]);
+    $stmt->execute(['email' => $email, 'ip_hash' => hash_hmac('sha256', $ip, login_hash_secret())]);
 }
