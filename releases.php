@@ -10,7 +10,7 @@ $errors = [];
 $notice = '';
 $allowedTypes = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
 
-function store_artwork(array $file, array $allowedTypes): ?string
+function read_artwork_upload(array $file, array $allowedTypes): ?array
 {
     if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) return null;
     if (($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) throw new RuntimeException('Artwork upload failed. Please try again.');
@@ -18,18 +18,9 @@ function store_artwork(array $file, array $allowedTypes): ?string
     $finfo = new finfo(FILEINFO_MIME_TYPE);
     $mime = $finfo->file((string)$file['tmp_name']);
     if (!isset($allowedTypes[$mime])) throw new RuntimeException('Use a JPG, PNG or WEBP image.');
-    $dir = __DIR__ . '/uploads/artwork';
-    if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) throw new RuntimeException('Could not create the artwork folder.');
-    $name = bin2hex(random_bytes(16)) . '.' . $allowedTypes[$mime];
-    if (!move_uploaded_file((string)$file['tmp_name'], $dir . '/' . $name)) throw new RuntimeException('Could not save the artwork.');
-    return 'uploads/artwork/' . $name;
-}
-
-function remove_artwork(?string $path): void
-{
-    if (!$path || !str_starts_with($path, 'uploads/artwork/')) return;
-    $full = __DIR__ . '/' . $path;
-    if (is_file($full)) @unlink($full);
+    $data = file_get_contents((string)$file['tmp_name']);
+    if ($data === false) throw new RuntimeException('Could not read the uploaded artwork.');
+    return ['mime' => $mime, 'data' => $data];
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -39,11 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($action === 'delete') {
             $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
             if (!$id) throw new RuntimeException('Invalid release selected.');
-            $stmt = $pdo->prepare('SELECT artwork_path FROM releases WHERE id = :id');
-            $stmt->execute(['id' => $id]);
-            $old = $stmt->fetch();
             $pdo->prepare('DELETE FROM releases WHERE id = :id')->execute(['id' => $id]);
-            if ($old) remove_artwork($old['artwork_path'] ?? null);
             redirect_to('releases.php?deleted=1');
         }
 
@@ -55,29 +42,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $status = (string)($_POST['status'] ?? 'draft');
             $date = trim((string)($_POST['release_date'] ?? ''));
             $notes = trim((string)($_POST['notes'] ?? ''));
-            if ($title === '' || mb_strlen($title) > 200) throw new RuntimeException('Enter a release title (maximum 200 characters).');
-            if ($artist === '' || mb_strlen($artist) > 200) throw new RuntimeException('Enter an artist name (maximum 200 characters).');
+            if ($title === '' || strlen($title) > 800) throw new RuntimeException('Enter a release title (maximum 200 characters).');
+            if ($artist === '' || strlen($artist) > 800) throw new RuntimeException('Enter an artist name (maximum 200 characters).');
             if (!in_array($type, ['single','ep','album'], true)) throw new RuntimeException('Choose a valid release type.');
             if (!in_array($status, ['draft','preparing','submitted','scheduled','released'], true)) throw new RuntimeException('Choose a valid status.');
             if ($date !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) throw new RuntimeException('Enter a valid release date.');
 
-            $oldArtwork = null;
             if ($id > 0) {
-                $check = $pdo->prepare('SELECT artwork_path FROM releases WHERE id = :id');
+                $check = $pdo->prepare('SELECT id FROM releases WHERE id = :id');
                 $check->execute(['id' => $id]);
-                $existing = $check->fetch();
-                if (!$existing) throw new RuntimeException('That release could not be found.');
-                $oldArtwork = $existing['artwork_path'] ?? null;
+                if (!$check->fetch()) throw new RuntimeException('That release could not be found.');
             }
-            $newArtwork = store_artwork($_FILES['artwork'] ?? [], $allowedTypes);
-            $artwork = $newArtwork ?? $oldArtwork;
-            $params = ['title'=>$title,'artist'=>$artist,'type'=>$type,'status'=>$status,'date'=>$date !== '' ? $date : null,'notes'=>$notes !== '' ? $notes : null,'artwork'=>$artwork];
+            $newArtwork = read_artwork_upload($_FILES['artwork'] ?? [], $allowedTypes);
+            $params = ['title'=>$title,'artist'=>$artist,'type'=>$type,'status'=>$status,'date'=>$date !== '' ? $date : null,'notes'=>$notes !== '' ? $notes : null,'artwork'=>$newArtwork ? 'database' : null];
             if ($id > 0) {
                 $params['id'] = $id;
-                $pdo->prepare('UPDATE releases SET title=:title, artist_name=:artist, release_type=:type, status=:status, release_date=:date, notes=:notes, artwork_path=:artwork, updated_at=NOW() WHERE id=:id')->execute($params);
-                if ($newArtwork) remove_artwork($oldArtwork);
+                $sql = 'UPDATE releases SET title=:title, artist_name=:artist, release_type=:type, status=:status, release_date=:date, notes=:notes, updated_at=NOW()';
+                if ($newArtwork) $sql .= ', artwork_path=:artwork';
+                $sql .= ' WHERE id=:id';
+                if (!$newArtwork) unset($params['artwork']);
+                $pdo->prepare($sql)->execute($params);
+                $releaseId = $id;
             } else {
                 $pdo->prepare('INSERT INTO releases (title,artist_name,release_type,status,release_date,notes,artwork_path) VALUES (:title,:artist,:type,:status,:date,:notes,:artwork)')->execute($params);
+                $releaseId = (int)$pdo->lastInsertId('releases_id_seq');
+            }
+            if ($newArtwork) {
+                $imageStmt = $pdo->prepare('INSERT INTO release_artwork (release_id,mime_type,image_data,updated_at) VALUES (:id,:mime,:data,NOW()) ON CONFLICT (release_id) DO UPDATE SET mime_type=EXCLUDED.mime_type,image_data=EXCLUDED.image_data,updated_at=NOW()');
+                $imageStmt->bindValue(':id', $releaseId, PDO::PARAM_INT);
+                $imageStmt->bindValue(':mime', $newArtwork['mime'], PDO::PARAM_STR);
+                $imageStmt->bindValue(':data', $newArtwork['data'], PDO::PARAM_LOB);
+                $imageStmt->execute();
             }
             redirect_to('releases.php?saved=1');
         }
@@ -117,7 +112,7 @@ function selected(string $actual, string $value): string { return $actual === $v
 <div class="full-field"><button class="primary-button" type="submit"><?= $editing ? 'Save changes' : 'Add release' ?> <span>→</span></button></div></form></section>
 <section class="panel release-catalogue"><div class="panel-heading"><div><div class="eyebrow">YOUR MUSIC</div><h3>Release catalogue</h3></div><span class="pill"><?= count($releases) ?> releases</span></div>
 <?php if (!$releases): ?><div class="empty-state"><div class="empty-icon">♫</div><h4>No releases yet</h4><p>Use the form above to add your first song.</p></div><?php else: ?><div class="managed-release-list"><?php foreach ($releases as $release): ?><article class="managed-release">
-<div class="release-art"><?php if (!empty($release['artwork_path'])): ?><img src="<?= h((string)$release['artwork_path']) ?>" alt="Cover artwork for <?= h((string)$release['title']) ?>"><?php else: ?><span>♫</span><?php endif; ?></div>
+<div class="release-art"><?php if (!empty($release['artwork_path'])): ?><img src="artwork.php?id=<?= (int)$release['id'] ?>" alt="Cover artwork for <?= h((string)$release['title']) ?>"><?php else: ?><span>♫</span><?php endif; ?></div>
 <div class="managed-release-info"><strong><?= h((string)$release['title']) ?></strong><small><?= h((string)$release['artist_name']) ?> · <?= h(strtoupper((string)$release['release_type'])) ?></small><span class="pill"><?= h(ucfirst((string)$release['status'])) ?></span><?php if (!empty($release['release_date'])): ?><small>Release date: <?= h((string)$release['release_date']) ?></small><?php endif; ?></div>
 <div class="release-actions"><a class="secondary-button" href="releases.php?edit=<?= (int)$release['id'] ?>">Edit</a><form method="post" onsubmit="return confirm('Delete this release? This cannot be undone.');"><input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$release['id'] ?>"><button class="danger-button" type="submit">Delete</button></form></div>
 </article><?php endforeach; ?></div><?php endif; ?></section>
