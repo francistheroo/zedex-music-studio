@@ -12,7 +12,7 @@ try {
     fwrite(STDOUT, "Neon PostgreSQL connection: OK\n");
     fwrite(STDOUT, "Database: " . $row['database_name'] . "\n");
     fwrite(STDOUT, "Database user: " . $row['database_user'] . "\n");
-    fwrite(STDOUT, "Expected application tables found: " . $tables . "/3\n");
+    fwrite(STDOUT, "Expected application tables found: " . $tables . "/4\n");
     fwrite(STDOUT, "PostgreSQL: " . strtok((string)$row['server_version'], "\n") . "\n");
     if ((int)$tables !== 4) {
         fwrite(STDERR, "Run database/schema.sql in the Neon SQL Editor, then repeat this check.\n");
