@@ -20,4 +20,11 @@ function ensure_release_schema(PDO $pdo): void
     $pdo->exec("ALTER TABLE releases ADD COLUMN IF NOT EXISTS distributor_url TEXT NULL");
     $pdo->exec("ALTER TABLE releases ADD COLUMN IF NOT EXISTS submitted_at DATE NULL");
     $pdo->exec("ALTER TABLE releases ADD COLUMN IF NOT EXISTS platforms TEXT NULL");
+    // Keep artwork in Neon PostgreSQL so it survives Render container restarts and redeploys.
+    $pdo->exec("CREATE TABLE IF NOT EXISTS release_artwork (
+        release_id BIGINT PRIMARY KEY REFERENCES releases(id) ON DELETE CASCADE,
+        mime_type VARCHAR(40) NOT NULL,
+        image_data BYTEA NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )");
 }
