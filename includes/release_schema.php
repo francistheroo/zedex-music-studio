@@ -27,4 +27,19 @@ function ensure_release_schema(PDO $pdo): void
         image_data TEXT NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )");
+    // Upgrade safely if an earlier deployment created this column as BYTEA.
+    $pdo->exec("DO \$\$
+    BEGIN
+        IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND table_name = 'release_artwork'
+              AND column_name = 'image_data'
+              AND data_type = 'bytea'
+        ) THEN
+            ALTER TABLE release_artwork
+            ALTER COLUMN image_data TYPE TEXT USING encode(image_data, 'base64');
+        END IF;
+    END
+    \$\$");
 }
